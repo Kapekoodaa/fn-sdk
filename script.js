@@ -1,11 +1,15 @@
 // script.js - cleaned + modal property search + copy icons + jump-to-item
-const GITHUB_API = 'https://api.github.com/repos/offsetsdumps/offsetsdumps/contents/games';
-const GITHUB_RAW = 'https://raw.githubusercontent.com/offsetsdumps/offsetsdumps/main/games';
+const GITHUB_API = 'https://api.github.com/repos/Kapekoodaa/fn-sdk/contents/games';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/Kapekoodaa/fn-sdk/main/games';
 
 let currentGame = null;
 let currentGameData = null;
 let currentCategory = 'classes';
-let searchFilters = { names: true, properties: false, offsets: false };
+let searchFilters = {
+    names: true,
+    properties: false,
+    offsets: false
+};
 let searchTimeout = null;
 let allItems = []; // currently loaded items in items-list (reflects currentCategory)
 
@@ -47,39 +51,87 @@ function createStars() {
     }
 }
 
-// Load games list
+// Load games list and SDK update date
 async function loadGames() {
     try {
-        const response = await fetch(GITHUB_API, { headers: { Accept: 'application/vnd.github.v3+json' } });
+        // Fetch games list
+        const response = await fetch(GITHUB_API, {
+            headers: {
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
         if (!response.ok) throw new Error('Failed to fetch games');
         const data = await response.json();
         const games = data.filter(item => item.type === 'dir');
-        document.getElementById('totalGames').textContent = games.length;
-        displayGames(games);
+
+        // Store games for later use
+        window.availableGames = games;
+
+        // Fetch last update date from GitHub commits API
+        try {
+            const commitsResponse = await fetch('https://api.github.com/repos/Kapekoodaa/fn-sdk/commits?path=games&per_page=1', {
+                headers: {
+                    Accept: 'application/vnd.github.v3+json'
+                }
+            });
+            if (commitsResponse.ok) {
+                const commits = await commitsResponse.json();
+                if (commits.length > 0) {
+                    const lastCommitDate = new Date(commits[0].commit.author.date);
+                    const formattedDate = formatDate(lastCommitDate);
+                    document.getElementById('sdkUpdated').textContent = formattedDate;
+                } else {
+                    document.getElementById('sdkUpdated').textContent = 'Unknown';
+                }
+            } else {
+                document.getElementById('sdkUpdated').textContent = 'Unknown';
+            }
+        } catch (err) {
+            console.error('Error fetching update date:', err);
+            document.getElementById('sdkUpdated').textContent = 'Unknown';
+        }
     } catch (err) {
         console.error('Error loading games:', err);
         showNotification('❌ Failed to load games from GitHub');
-        document.getElementById('gamesGrid').innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><h3>Failed to load games</h3><p style="color:#666;margin-top:8px;">Check console</p></div>`;
+        document.getElementById('sdkUpdated').textContent = 'Error';
     }
 }
 
-// Display games grid
-function displayGames(games) {
-    const gamesGrid = document.getElementById('gamesGrid');
-    gamesGrid.innerHTML = '';
-    if (games.length === 0) {
-        gamesGrid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📁</div><h3>No games found</h3></div>`;
+// Format date to readable string
+function formatDate(date) {
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Enter SDK Viewer - automatically open the first (and only) game
+async function enterSDKViewer() {
+    if (!window.availableGames || window.availableGames.length === 0) {
+        showNotification('❌ No games available. Please wait...');
         return;
     }
-    games.forEach(game => {
-        const gameCard = document.createElement('div');
-        gameCard.className = 'game-card';
-        const gameName = decodeURIComponent(game.name);
-        const icon = getGameIcon(gameName);
-        gameCard.innerHTML = `<div class="game-thumbnail">${icon}</div><div class="game-info"><div class="game-title">${gameName}</div><div class="game-badge">GitHub Source</div></div>`;
-        gameCard.onclick = () => openGame(game);
-        gamesGrid.appendChild(gameCard);
-    });
+
+    // Open the first game
+    const firstGame = window.availableGames[0];
+    await openGame(firstGame);
+}
+
+// Display games grid - no longer needed, but keeping for compatibility
+function displayGames(games) {
+    // This function is kept for compatibility but no longer displays games
+    // Games are now accessed via the "Enter SDK Viewer" button
 }
 
 function getGameIcon(gameName) {
@@ -93,14 +145,7 @@ function getGameIcon(gameName) {
     return '🎮';
 }
 
-// Game search on home
-document.getElementById('gameSearch').addEventListener('input', (e) => {
-    const search = e.target.value.toLowerCase();
-    document.querySelectorAll('.game-card').forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(search) ? 'block' : 'none';
-    });
-});
+// Game search on home - no longer needed since we removed the games grid
 
 // Open single game and load JSON files
 async function openGame(game) {
@@ -108,13 +153,20 @@ async function openGame(game) {
         showNotification('⏳ Loading game data...');
         const gameName = game.name;
         const filesUrl = `${GITHUB_API}/${gameName}`;
-        const filesResponse = await fetch(filesUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
+        const filesResponse = await fetch(filesUrl, {
+            headers: {
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
         if (!filesResponse.ok) throw new Error('Failed to fetch game files');
         const files = await filesResponse.json();
         const jsonFiles = files.filter(f => f.name.endsWith('.json'));
         document.getElementById('totalFiles').textContent = jsonFiles.length;
 
-        const gameData = { name: decodeURIComponent(gameName), files: {} };
+        const gameData = {
+            name: decodeURIComponent(gameName),
+            files: {}
+        };
 
         for (const file of jsonFiles) {
             try {
@@ -226,18 +278,29 @@ function loadItems(category, callback) {
 
                 itemEntry.onclick = (e) => {
                     if (e.target.closest('.copy-btn')) return; // prevent navigation on copy click
-                    showDetails({ name, value, hexValue }, category, itemEntry);
+                    showDetails({
+                        name,
+                        value,
+                        hexValue
+                    }, category, itemEntry);
                 };
 
                 const copyBtn = itemEntry.querySelector('.copy-btn');
                 copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(hexValue);
+                    copyToClipboard(hexValue, name);
                     copyBtn.classList.add('copied');
                     setTimeout(() => copyBtn.classList.remove('copied'), 700);
                 };
 
                 fragment.appendChild(itemEntry);
-                allItems.push({ element: itemEntry, name, value, hexValue, rawData: item, category });
+                allItems.push({
+                    element: itemEntry,
+                    name,
+                    value,
+                    hexValue,
+                    rawData: item,
+                    category
+                });
             });
         } else {
             fileData.data.forEach((item) => {
@@ -253,10 +316,19 @@ function loadItems(category, callback) {
                 </div>
             `;
 
-                itemEntry.onclick = () => showDetails({ name, data }, category, itemEntry);
+                itemEntry.onclick = () => showDetails({
+                    name,
+                    data
+                }, category, itemEntry);
 
                 fragment.appendChild(itemEntry);
-                allItems.push({ element: itemEntry, name, data, rawData: item, category });
+                allItems.push({
+                    element: itemEntry,
+                    name,
+                    data,
+                    rawData: item,
+                    category
+                });
             });
         }
 
@@ -379,7 +451,7 @@ function showDetails(item, category, element) {
                 <div class="details-meta">
                     <div class="meta-badge">Offset</div>
                     <div class="copy-value copy-inline">
-                        <button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${item.hexValue}')">
+                        <button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${item.hexValue}', '${escapeHtml(item.name)}')">
                             ${clipboardSVG()}
                         </button>
                         <span style="margin-left:8px; color:#90EE90; font-family:'Courier New', monospace;">${item.hexValue}</span>
@@ -406,7 +478,10 @@ function renderClassOrStruct(item, category, panel) {
             else if (prop.__MDKClassSize !== undefined) classSize = prop.__MDKClassSize;
             else {
                 const propName = Object.keys(prop)[0];
-                properties.push({ name: propName, details: prop[propName] });
+                properties.push({
+                    name: propName,
+                    details: prop[propName]
+                });
             }
         });
     }
@@ -444,7 +519,7 @@ function renderClassOrStruct(item, category, panel) {
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             ${hexOffset !== '' ? `<span class="property-details">Offset: <span style="color:#90EE90; font-family:'Courier New', monospace;">${hexOffset}</span> | Size: ${size} bytes</span>` : `<span class="property-details">Size: ${size} bytes</span>`}
-                            ${hexOffset !== '' ? `<button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${hexOffset}')">${clipboardSVG()}</button>` : ''}
+                            ${hexOffset !== '' ? `<button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${hexOffset}', '${escapeHtml(prop.name)}')">${clipboardSVG()}</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -535,9 +610,16 @@ function renderFunctions(item, panel) {
 }
 
 /* --------------- Copy to clipboard + small utils --------------- */
-function copyToClipboard(text) {
+function copyToClipboard(text, name = null) {
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => showNotification('📋 Copied: ' + text)).catch(err => {
+    navigator.clipboard.writeText(text).then(() => {
+        if (name) {
+            // Show offset name and value in notification
+            showNotification(`📋 Copied ${name}: ${text}`);
+        } else {
+            showNotification('📋 Copied: ' + text);
+        }
+    }).catch(err => {
         console.error('Copy failed', err);
         showNotification('❌ Failed to copy');
     });
@@ -550,12 +632,25 @@ function showNotification(message) {
     notif.className = 'notification';
     notif.textContent = message;
     document.body.appendChild(notif);
-    setTimeout(() => { notif.style.opacity = '0'; notif.style.transition = 'opacity .2s'; setTimeout(() => notif.remove(), 220); }, 2200);
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        notif.style.transition = 'opacity .2s';
+        setTimeout(() => notif.remove(), 220);
+    }, 2200);
 }
 
 function escapeHtml(text) {
     if (!text) return '';
-    return String(text).replace(/[&<>"'`=\/]/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;' }[s]));
+    return String(text).replace(/[&<>"'`=\/]/g, s => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+        '/': '&#x2F;',
+        '`': '&#x60;',
+        '=': '&#x3D;'
+    } [s]));
 }
 
 /* Minimal clipboard SVG icon (returns HTML string) */
@@ -625,7 +720,7 @@ function openPropertyModal(q = '') {
     });
 
     // sort alphabetically by class then prop (optional)
-    results.sort((a,b) => {
+    results.sort((a, b) => {
         if (a.className < b.className) return -1;
         if (a.className > b.className) return 1;
         if (a.propName < b.propName) return -1;
@@ -660,7 +755,7 @@ function openPropertyModal(q = '') {
             copyBtn.innerHTML = clipboardSVG();
             copyBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();
-                copyToClipboard(res.hexOffset);
+                copyToClipboard(res.hexOffset, res.propName);
             });
             right.appendChild(copyBtn);
         }
@@ -679,7 +774,10 @@ function openPropertyModal(q = '') {
                     // find item in allItems (loaded for that category)
                     const target = allItems.find(i => i.name === res.className);
                     if (target && target.element) {
-                        target.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        target.element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
                         target.element.click();
 
                         // after opening details, highlight the property position in details panel
@@ -690,7 +788,10 @@ function openPropertyModal(q = '') {
                                 const pn = p.getAttribute('data-propname') || '';
                                 if (pn === res.propName) {
                                     p.style.outline = '2px solid rgba(144,238,144,0.3)';
-                                    p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    p.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center'
+                                    });
                                     setTimeout(() => p.style.outline = '', 2200);
                                     break;
                                 }
@@ -716,8 +817,13 @@ function closePropertyModal() {
 }
 
 /* --------------- Dump request modal helpers --------------- */
-function openDumpRequestModal() { document.getElementById('dumpRequestModal').classList.add('active'); }
-function closeDumpRequestModal() { document.getElementById('dumpRequestModal').classList.remove('active'); }
+function openDumpRequestModal() {
+    document.getElementById('dumpRequestModal').classList.add('active');
+}
+
+function closeDumpRequestModal() {
+    document.getElementById('dumpRequestModal').classList.remove('active');
+}
 
 /* --------------- Init --------------- */
 document.addEventListener('DOMContentLoaded', init);

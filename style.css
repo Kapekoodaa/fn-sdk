@@ -178,6 +178,43 @@ body {
 }
 
 
+/* Enter Viewer Button */
+
+.enter-viewer-container {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 0 15px;
+    text-align: center;
+}
+
+.enter-viewer-btn {
+    width: 100%;
+    padding: 18px 32px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 40px;
+    color: #fff;
+    cursor: pointer;
+    transition: all .2s;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.enter-viewer-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #7a8cee 0%, #8655b8 100%);
+}
+
+.enter-viewer-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+
 /* Grid */
 
 .games-grid {
@@ -675,13 +712,19 @@ body {
     top: 15px;
     right: 15px;
     background: rgba(0, 0, 0, 0.95);
-    border: 1px solid #667eea;
+    border: 2px solid #667eea;
     padding: 15px 22px;
     border-radius: 12px;
-    z-index: 10000;
+    z-index: 15000;
     animation: fadeIn .2s ease;
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+        0 6px 25px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(102, 126, 234, 0.3),
+        0 0 40px rgba(102, 126, 234, 0.2),
+        inset 0 0 15px rgba(102, 126, 234, 0.1);
     font-size: .9rem;
+    backdrop-filter: blur(10px);
+    text-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
 

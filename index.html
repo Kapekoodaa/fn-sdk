@@ -20,35 +20,30 @@
 
         <div class="stats-container">
             <div class="stat-card">
-                <div class="stat-number" id="totalGames">0</div>
-                <div class="stat-label">Total Games</div>
+                <div class="stat-number" id="sdkUpdated">Loading...</div>
+                <div class="stat-label">SDK Updated</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="totalFiles">0</div>
                 <div class="stat-label">Total Files</div>
             </div>
-            <div class="stat-card stat-card-clickable" onclick="window.open('https://github.com/offsetsdumps/offsetsdumps', '_blank')">
+            <div class="stat-card stat-card-clickable" onclick="window.open('https://github.com/Kapekoodaa/fn-sdk', '_blank')">
                 <div class="stat-icon">🔗</div>
                 <div class="stat-label">View on GitHub</div>
             </div>
         </div>
 
-        <div class="search-container">
-            <input type="text" class="search-input" id="gameSearch" placeholder="🔍 Search games..." />
-        </div>
-
-        <div class="games-grid" id="gamesGrid">
-            <div class="loading">
-                <div class="loading-spinner"></div>
-                <p>Loading games from GitHub...</p>
-            </div>
+        <div class="enter-viewer-container">
+            <button class="enter-viewer-btn" id="enterViewerBtn" onclick="enterSDKViewer()">
+                🚀 Enter SDK Viewer
+            </button>
         </div>
     </div>
 
     <!-- VIEWER PAGE -->
     <div class="page viewer-page" id="viewerPage">
         <div class="viewer-header">
-            <button class="back-btn" onclick="goHome()">← Back to Games</button>
+            <button class="back-btn" onclick="goHome()">← Back</button>
             <div class="viewer-title">
                 <h2 id="currentGameTitle">Game Viewer</h2>
             </div>
@@ -162,7 +157,7 @@
                     <div class="option-content">
                         <h3>Via GitHub Issue</h3>
                         <p>Open an issue on our GitHub repository with the game name and details.</p>
-                        <button class="btn btn-primary" onclick="window.open('https://github.com/offsetsdumps/offsetsdumps/issues/new', '_blank')">
+                        <button class="btn btn-primary" onclick="window.open('https://github.com/Kapekoodaa/fn-sdk/issues/new', '_blank')">
                             Open GitHub Issue
                         </button>
                     </div>
@@ -173,7 +168,7 @@
                     <div class="option-content">
                         <h3>Contact Me Directly</h3>
                         <p>Reach out to me personally and I'll create the dump for you.</p>
-                        <button class="btn btn-secondary" onclick="window.open('https://github.com/offsetsdumps', '_blank')">
+                        <button class="btn btn-secondary" onclick="window.open('https://github.com/Kapekoodaa', '_blank')">
                             View Profile
                         </button>
                     </div>
@@ -184,7 +179,7 @@
                     <div class="option-content">
                         <h3>Contribute Your Own Dump</h3>
                         <p>Have your own dumps? Submit a pull request to add them!</p>
-                        <button class="btn btn-secondary" onclick="window.open('https://github.com/offsetsdumps/offsetsdumps', '_blank')">
+                        <button class="btn btn-secondary" onclick="window.open('https://github.com/Kapekoodaa/fn-sdk', '_blank')">
                             View Repository
                         </button>
                     </div>
