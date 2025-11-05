@@ -636,6 +636,11 @@ body {
     transform: translateX(3px);
 }
 
+.property-item.search-highlight {
+    background: rgba(144, 238, 144, 0.12);
+    border-color: rgba(144, 238, 144, 0.45);
+}
+
 .property-header {
     display: flex;
     justify-content: space-between;

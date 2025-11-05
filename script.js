@@ -580,34 +580,89 @@ function renderClassOrStruct(item, category, panel) {
     }
 
     if (properties.length > 0) {
-        html += `<div class="details-section"><div class="section-title">📋 Properties (${properties.length})</div>`;
+        html += `<div class="details-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div class="section-title">📋 Properties (${properties.length})</div>
+                <input type="text" id="propertySearchInDetails" placeholder="🔍 Search properties..." style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.9rem; width: 250px; outline: none;" />
+            </div>
+            <div id="propertySearchResultsInfo" style="color: #888; font-size: 0.85rem; margin-bottom: 8px;"></div>
+            <div id="propertiesList">`;
         properties.forEach(prop => {
             const details = prop.details;
             const type = Array.isArray(details) && details[0] ? details[0][0] : 'Unknown';
             const offset = Array.isArray(details) && details[1] !== undefined ? details[1] : '';
             const size = Array.isArray(details) && details[2] !== undefined ? details[2] : '';
             const hexOffset = (offset !== '') ? '0x' + offset.toString(16).toUpperCase() : '';
+            const escapedName = escapeHtml(prop.name);
+            const escapedType = escapeHtml(type);
 
             html += `
-                <div class="property-item" data-propname="${escapeHtml(prop.name)}" data-propoffset="${hexOffset}">
+                <div class="property-item" data-propname="${escapedName}" data-proptype="${escapedType}" data-propoffset="${hexOffset}">
                     <div class="property-header">
                         <div style="display:flex; gap:12px; align-items:center;">
-                            <span class="property-name">${prop.name}</span>
-                            <span class="property-type">${type}</span>
+                            <span class="property-name">${escapedName}</span>
+                            <span class="property-type">${escapedType}</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             ${hexOffset !== '' ? `<span class="property-details">Offset: <span style="color:#90EE90; font-family:'Courier New', monospace;">${hexOffset}</span> | Size: ${size} bytes</span>` : `<span class="property-details">Size: ${size} bytes</span>`}
-                            ${hexOffset !== '' ? `<button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${hexOffset}', '${escapeHtml(prop.name)}')">${clipboardSVG()}</button>` : ''}
+                            ${hexOffset !== '' ? `<button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${hexOffset}', '${escapedName}')">${clipboardSVG()}</button>` : ''}
                         </div>
                     </div>
                 </div>
             `;
         });
-        html += `</div>`;
+        html += `</div></div>`;
     }
 
     panel.innerHTML = html;
-    // after rendering, ensure property click behaviour (if wanted later)
+    
+    // Add search functionality for properties
+    if (properties.length > 0) {
+        const searchInput = panel.querySelector('#propertySearchInDetails');
+        const searchInfo = panel.querySelector('#propertySearchResultsInfo');
+        const propertiesList = panel.querySelector('#propertiesList');
+        const allPropertyItems = propertiesList.querySelectorAll('.property-item');
+        
+        let searchTimeout = null;
+        
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim().toLowerCase();
+            clearTimeout(searchTimeout);
+            
+            searchTimeout = setTimeout(() => {
+                if (searchTerm === '') {
+                    allPropertyItems.forEach(item => {
+                        item.style.display = 'block';
+                        item.classList.remove('search-highlight');
+                    });
+                    searchInfo.textContent = '';
+                    return;
+                }
+                
+                let matchCount = 0;
+                allPropertyItems.forEach(item => {
+                    const propName = item.getAttribute('data-propname') || '';
+                    const propType = item.getAttribute('data-proptype') || '';
+                    const propOffset = item.getAttribute('data-propoffset') || '';
+                    
+                    const matchesName = propName.toLowerCase().includes(searchTerm);
+                    const matchesType = propType.toLowerCase().includes(searchTerm);
+                    const matchesOffset = propOffset.toLowerCase().includes(searchTerm);
+                    
+                    if (matchesName || matchesType || matchesOffset) {
+                        item.style.display = 'block';
+                        item.classList.add('search-highlight');
+                        matchCount++;
+                    } else {
+                        item.style.display = 'none';
+                        item.classList.remove('search-highlight');
+                    }
+                });
+                
+                searchInfo.textContent = matchCount > 0 ? `Found ${matchCount} of ${properties.length} properties` : 'No properties found';
+            }, 150);
+        });
+    }
 }
 
 function renderEnum(item, panel) {
