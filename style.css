@@ -750,31 +750,6 @@ body {
 }
 
 
-/* Dump button */
-
-.dump-request-btn {
-    position: fixed;
-    bottom: 15px;
-    left: 15px;
-    background: linear-gradient(135deg, #90EE90 0%, #98FB98 100%);
-    border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
-    color: #0f0f23;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .18s;
-    box-shadow: 0 4px 15px rgba(144, 238, 144, 0.3);
-    z-index: 1000;
-    font-size: .9rem;
-}
-
-.dump-request-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(144, 238, 144, 0.4);
-}
-
-
 /* Modal styles (existing) */
 
 .modal {

@@ -493,10 +493,8 @@ function renderOffsets(item, panel) {
     const offsetCount = offsets.length;
 
     // Get metadata from rawFileData if available
-    let credit = null;
     let version = null;
     if (item.rawFileData) {
-        credit = item.rawFileData.credit;
         version = item.rawFileData.version;
     }
 
@@ -510,18 +508,6 @@ function renderOffsets(item, panel) {
             </div>
         </div>
     `;
-
-    if (credit) {
-        html += `<div class="details-section">
-            <div class="section-title">📝 Credit</div>
-            <div class="property-item">
-                <div class="property-header">
-                    <span class="property-name">Dumper: ${credit.dumper_used || 'Unknown'}</span>
-                    ${credit.dumper_link ? `<a href="${credit.dumper_link}" target="_blank" style="color: #90EE90; text-decoration: none; margin-left: 8px;">🔗 Link</a>` : ''}
-                </div>
-            </div>
-        </div>`;
-    }
 
     if (offsets.length > 0) {
         html += `<div class="details-section"><div class="section-title">📍 Offsets (${offsetCount})</div>`;
@@ -906,15 +892,6 @@ function openPropertyModal(q = '') {
 /* Close modal */
 function closePropertyModal() {
     document.getElementById('propertyModalBackdrop').classList.remove('active');
-}
-
-/* --------------- Dump request modal helpers --------------- */
-function openDumpRequestModal() {
-    document.getElementById('dumpRequestModal').classList.add('active');
-}
-
-function closeDumpRequestModal() {
-    document.getElementById('dumpRequestModal').classList.remove('active');
 }
 
 /* --------------- Init --------------- */

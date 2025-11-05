@@ -1,17 +1,17 @@
 {
-    "credit": {
-        "dumper_link": "https://github.com/Encryqed/Dumper-7",
-        "dumper_used": "Dumper-7"
-    },
-
     "updated_at": "1762363886401",
     "version": 10202,
     "data": [
-        ["OFFSET_GWORLD", 379861440],
-        ["OFFSET_GOBJECTS", 399328264],
-        ["CameraLocation", 376],
-        ["CameraRotation", 392],
-        ["OFFSET_PROCESSEVENT", 45416600],
-        ["INDEX_PROCESSEVENT", 8]
+        ["GWORLD", 384473520],
+        ["GWORLD2", 384128112],
+        ["GNAMES", 381797824],
+        ["GOBJECTS", 382709632],
+        ["PROCESSEVENT", 225946],
+        ["INDEX_PROCESSEVENT", 8],
+        ["Camera Location", 368],
+        ["Camera Rotation", 392],
+        ["Seconds", 400],
+        ["Projectile Speed", 9796],
+        ["Projectile Gravity", 9800]
     ]
 }
