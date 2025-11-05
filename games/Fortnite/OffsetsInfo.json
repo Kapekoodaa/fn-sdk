@@ -7,7 +7,7 @@
     "updated_at": "1762363886401",
     "version": 10202,
     "data": [
-        ["OFFSET_GWORLD", 0x16EA99B0],
+        ["OFFSET_GWORLD", 379861440],
         ["OFFSET_GOBJECTS", 399328264],
         ["CameraLocation", 376],
         ["CameraRotation", 392],

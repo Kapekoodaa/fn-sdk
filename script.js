@@ -438,6 +438,23 @@ function searchInItemData(itemData, searchTerm) {
     return matches;
 }
 
+/* --------------- Details rendering ----------------- */
+function showDetails(item, category, element) {
+    document.querySelectorAll('.item-entry').forEach(e => e.classList.remove('active'));
+    if (element) element.classList.add('active');
+
+    const detailsPanel = document.getElementById('detailsPanel');
+    if (category === 'offsets') {
+        renderOffsets(item, detailsPanel);
+    } else if (category === 'classes' || category === 'structs') {
+        renderClassOrStruct(item, category, detailsPanel);
+    } else if (category === 'enums') {
+        renderEnum(item, detailsPanel);
+    } else if (category === 'functions') {
+        renderFunctions(item, detailsPanel);
+    }
+}
+
 /* --------------- Helper function to parse offset values (hex or decimal) --------------- */
 function parseOffsetValue(value) {
     // If already a number, return it
@@ -471,23 +488,6 @@ function parseOffsetValue(value) {
     return 0;
 }
 
-/* --------------- Details rendering ----------------- */
-function showDetails(item, category, element) {
-    document.querySelectorAll('.item-entry').forEach(e => e.classList.remove('active'));
-    if (element) element.classList.add('active');
-
-    const detailsPanel = document.getElementById('detailsPanel');
-    if (category === 'offsets') {
-        renderOffsets(item, detailsPanel);
-    } else if (category === 'classes' || category === 'structs') {
-        renderClassOrStruct(item, category, detailsPanel);
-    } else if (category === 'enums') {
-        renderEnum(item, detailsPanel);
-    } else if (category === 'functions') {
-        renderFunctions(item, detailsPanel);
-    }
-}
-
 function renderOffsets(item, panel) {
     const offsets = item.data || [];
     const offsetCount = offsets.length;
@@ -495,11 +495,9 @@ function renderOffsets(item, panel) {
     // Get metadata from rawFileData if available
     let credit = null;
     let version = null;
-    let updatedAt = null;
     if (item.rawFileData) {
         credit = item.rawFileData.credit;
         version = item.rawFileData.version;
-        updatedAt = item.rawFileData.updated_at;
     }
 
     let html = `
@@ -535,7 +533,6 @@ function renderOffsets(item, panel) {
             // Parse the value (handles hex strings and decimal numbers)
             const numericValue = parseOffsetValue(rawValue);
             const hexValue = '0x' + numericValue.toString(16).toUpperCase();
-            const decimalValue = numericValue.toString();
             const escapedName = escapeHtml(name);
 
             html += '<div class="property-item" data-offsetname="' + escapedName + '">' +
@@ -545,8 +542,7 @@ function renderOffsets(item, panel) {
                 '</div>' +
                 '<div style="display:flex; align-items:center; gap:8px;">' +
                 '<span class="property-details">' +
-                '<span style="color:#90EE90; font-family:\'Courier New\', monospace; margin-right: 12px;">' + hexValue + '</span>' +
-                '<span style="color:#888; font-size: 0.85rem;">(' + decimalValue + ')</span>' +
+                '<span style="color:#90EE90; font-family:\'Courier New\', monospace;">' + hexValue + '</span>' +
                 '</span>' +
                 '<button class="copy-btn" title="Copy hex offset" onclick="copyToClipboard(\'' + hexValue + '\', \'' + escapedName + '\')">' +
                 clipboardSVG() +
