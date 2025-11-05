@@ -254,53 +254,33 @@ function loadItems(category, callback) {
         const fragment = document.createDocumentFragment();
 
         if (category === 'offsets') {
-            fileData.data.forEach((item) => {
-                const itemEntry = document.createElement('div');
-                itemEntry.className = 'item-entry';
-                const name = item[0];
-                const value = item[1];
-                const hexValue = typeof value === 'number' ?
-                    '0x' + value.toString(16).toUpperCase() :
-                    String(value);
+            // Create a single "Offsets" item that contains all offsets
+            const itemEntry = document.createElement('div');
+            itemEntry.className = 'item-entry';
+            const offsetCount = fileData.data ? fileData.data.length : 0;
 
-                itemEntry.innerHTML = `
+            itemEntry.innerHTML = `
                 <div>
-                    <div class="item-name">${name}</div>
-                    <div class="item-type">${hexValue}</div>
+                    <div class="item-name">Offsets</div>
+                    <div class="item-type">${offsetCount} offset${offsetCount !== 1 ? 's' : ''}</div>
                 </div>
-                <span class="copy-btn" title="Copy Offset">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24" fill="none" stroke="#90EE90" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                </span>
             `;
 
-                itemEntry.onclick = (e) => {
-                    if (e.target.closest('.copy-btn')) return; // prevent navigation on copy click
-                    showDetails({
-                        name,
-                        value,
-                        hexValue
-                    }, category, itemEntry);
-                };
+            itemEntry.onclick = () => {
+                showDetails({
+                    name: 'Offsets',
+                    data: fileData.data,
+                    rawFileData: fileData
+                }, category, itemEntry);
+            };
 
-                const copyBtn = itemEntry.querySelector('.copy-btn');
-                copyBtn.onclick = () => {
-                    copyToClipboard(hexValue, name);
-                    copyBtn.classList.add('copied');
-                    setTimeout(() => copyBtn.classList.remove('copied'), 700);
-                };
-
-                fragment.appendChild(itemEntry);
-                allItems.push({
-                    element: itemEntry,
-                    name,
-                    value,
-                    hexValue,
-                    rawData: item,
-                    category
-                });
+            fragment.appendChild(itemEntry);
+            allItems.push({
+                element: itemEntry,
+                name: 'Offsets',
+                data: fileData.data,
+                rawData: fileData,
+                category
             });
         } else {
             fileData.data.forEach((item) => {
@@ -395,7 +375,27 @@ function performSearch(searchTerm) {
         if (searchFilters.names && item.name && item.name.toLowerCase().includes(searchTerm)) matches.push('name');
 
         if (currentCategory === 'offsets') {
-            if (searchFilters.offsets && item.hexValue && item.hexValue.toLowerCase().includes(searchTerm)) matches.push('offset value');
+            // Search within the offsets data array
+            if (item.data && Array.isArray(item.data)) {
+                item.data.forEach((offsetItem) => {
+                    const offsetName = offsetItem[0];
+                    const rawValue = offsetItem[1];
+
+                    // Search offset names
+                    if (searchFilters.names && offsetName && offsetName.toLowerCase().includes(searchTerm)) {
+                        matches.push('offset name');
+                    }
+
+                    // Search offset values (hex format)
+                    if (searchFilters.offsets) {
+                        const numericValue = parseOffsetValue(rawValue);
+                        const hexValue = '0x' + numericValue.toString(16).toUpperCase();
+                        if (hexValue.toLowerCase().includes(searchTerm)) {
+                            matches.push('offset value');
+                        }
+                    }
+                });
+            }
         } else if (item.data && Array.isArray(item.data) && (searchFilters.properties || searchFilters.offsets)) {
             const propertyMatches = searchInItemData(item.data, searchTerm);
             matches.push(...propertyMatches);
@@ -438,6 +438,39 @@ function searchInItemData(itemData, searchTerm) {
     return matches;
 }
 
+/* --------------- Helper function to parse offset values (hex or decimal) --------------- */
+function parseOffsetValue(value) {
+    // If already a number, return it
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    // If it's a string, try to parse it
+    if (typeof value === 'string') {
+        // Remove whitespace
+        const trimmed = value.trim();
+
+        // Check if it's a hex string (starts with 0x or 0X)
+        if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+            const parsed = parseInt(trimmed, 16);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        // Check if it contains hex characters (A-F) - treat as hex
+        if (/[A-Fa-f]/.test(trimmed)) {
+            const hexParsed = parseInt(trimmed, 16);
+            return isNaN(hexParsed) ? 0 : hexParsed;
+        }
+
+        // Otherwise, try parsing as decimal
+        const decimalParsed = parseInt(trimmed, 10);
+        return isNaN(decimalParsed) ? 0 : decimalParsed;
+    }
+
+    // Default to 0 if can't parse
+    return 0;
+}
+
 /* --------------- Details rendering ----------------- */
 function showDetails(item, category, element) {
     document.querySelectorAll('.item-entry').forEach(e => e.classList.remove('active'));
@@ -445,20 +478,7 @@ function showDetails(item, category, element) {
 
     const detailsPanel = document.getElementById('detailsPanel');
     if (category === 'offsets') {
-        detailsPanel.innerHTML = `
-            <div class="details-header">
-                <h2>${item.name}</h2>
-                <div class="details-meta">
-                    <div class="meta-badge">Offset</div>
-                    <div class="copy-value copy-inline">
-                        <button class="copy-btn" title="Copy offset" onclick="copyToClipboard('${item.hexValue}', '${escapeHtml(item.name)}')">
-                            ${clipboardSVG()}
-                        </button>
-                        <span style="margin-left:8px; color:#90EE90; font-family:'Courier New', monospace;">${item.hexValue}</span>
-                    </div>
-                </div>
-            </div>
-        `;
+        renderOffsets(item, detailsPanel);
     } else if (category === 'classes' || category === 'structs') {
         renderClassOrStruct(item, category, detailsPanel);
     } else if (category === 'enums') {
@@ -466,6 +486,82 @@ function showDetails(item, category, element) {
     } else if (category === 'functions') {
         renderFunctions(item, detailsPanel);
     }
+}
+
+function renderOffsets(item, panel) {
+    const offsets = item.data || [];
+    const offsetCount = offsets.length;
+
+    // Get metadata from rawFileData if available
+    let credit = null;
+    let version = null;
+    let updatedAt = null;
+    if (item.rawFileData) {
+        credit = item.rawFileData.credit;
+        version = item.rawFileData.version;
+        updatedAt = item.rawFileData.updated_at;
+    }
+
+    let html = `
+        <div class="details-header">
+            <h2>${item.name}</h2>
+            <div class="details-meta">
+                <div class="meta-badge">Offsets</div>
+                <div class="meta-badge">${offsetCount} offset${offsetCount !== 1 ? 's' : ''}</div>
+                ${version ? `<div class="meta-badge">Version: ${version}</div>` : ''}
+            </div>
+        </div>
+    `;
+
+    if (credit) {
+        html += `<div class="details-section">
+            <div class="section-title">📝 Credit</div>
+            <div class="property-item">
+                <div class="property-header">
+                    <span class="property-name">Dumper: ${credit.dumper_used || 'Unknown'}</span>
+                    ${credit.dumper_link ? `<a href="${credit.dumper_link}" target="_blank" style="color: #90EE90; text-decoration: none; margin-left: 8px;">🔗 Link</a>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }
+
+    if (offsets.length > 0) {
+        html += `<div class="details-section"><div class="section-title">📍 Offsets (${offsetCount})</div>`;
+
+        offsets.forEach((offsetItem) => {
+            const name = offsetItem[0];
+            const rawValue = offsetItem[1];
+
+            // Parse the value (handles hex strings and decimal numbers)
+            const numericValue = parseOffsetValue(rawValue);
+            const hexValue = '0x' + numericValue.toString(16).toUpperCase();
+            const decimalValue = numericValue.toString();
+            const escapedName = escapeHtml(name);
+
+            html += '<div class="property-item" data-offsetname="' + escapedName + '">' +
+                '<div class="property-header">' +
+                '<div style="display:flex; gap:12px; align-items:center;">' +
+                '<span class="property-name">' + escapedName + '</span>' +
+                '</div>' +
+                '<div style="display:flex; align-items:center; gap:8px;">' +
+                '<span class="property-details">' +
+                '<span style="color:#90EE90; font-family:\'Courier New\', monospace; margin-right: 12px;">' + hexValue + '</span>' +
+                '<span style="color:#888; font-size: 0.85rem;">(' + decimalValue + ')</span>' +
+                '</span>' +
+                '<button class="copy-btn" title="Copy hex offset" onclick="copyToClipboard(\'' + hexValue + '\', \'' + escapedName + '\')">' +
+                clipboardSVG() +
+                '</button>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        });
+
+        html += '</div>';
+    } else {
+        html += '<div class="empty-state"><p>No offsets available</p></div>';
+    }
+
+    panel.innerHTML = html;
 }
 
 function renderClassOrStruct(item, category, panel) {
