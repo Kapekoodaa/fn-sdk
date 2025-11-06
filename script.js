@@ -13,6 +13,122 @@ let searchFilters = {
 let searchTimeout = null;
 let allItems = []; // currently loaded items in items-list (reflects currentCategory)
 
+// Parse URL parameters
+function getURLParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
+// Get offset name from URL (supports ?offset=NAME, ?NAME, or /NAME)
+function getOffsetFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    // Try ?offset=NAME first (handles special characters like ? in name)
+    let offsetName = urlParams.get('offset');
+    if (offsetName) return decodeURIComponent(offsetName);
+    
+    // Try direct parameter ?NAME (for simple names without special chars)
+    const keys = Array.from(urlParams.keys());
+    if (keys.length > 0 && keys[0] !== 'offset' && keys[0] !== 'api') {
+        offsetName = keys[0];
+        // Check if it looks like an offset name (not other params)
+        if (offsetName.length > 0) {
+            return decodeURIComponent(offsetName);
+        }
+    }
+    
+    // Try hash-based routing #/offset/NAME or #/NAME
+    const hash = window.location.hash;
+    if (hash) {
+        if (hash.startsWith('#/offset/')) {
+            return decodeURIComponent(hash.substring(9));
+        } else if (hash.startsWith('#/') && hash.length > 2) {
+            // Support #/NAME format
+            return decodeURIComponent(hash.substring(2));
+        }
+    }
+    
+    // Try path-based routing /offset/NAME or /NAME
+    const path = window.location.pathname;
+    if (path && path !== '/' && path !== '/index.html') {
+        const pathParts = path.split('/').filter(p => p);
+        if (pathParts.length > 0) {
+            // If path is /offset/NAME, get NAME
+            if (pathParts[0] === 'offset' && pathParts.length > 1) {
+                return decodeURIComponent(pathParts.slice(1).join('/'));
+            }
+            // Otherwise, treat the whole path as the offset name
+            return decodeURIComponent(pathParts.join('/'));
+        }
+    }
+    
+    return null;
+}
+
+// Navigate to specific offset
+async function navigateToOffset(offsetName) {
+    if (!offsetName) return;
+    
+    // Wait for games to be loaded
+    if (!window.availableGames || window.availableGames.length === 0) {
+        await loadGames();
+    }
+    
+    // Auto-enter viewer if not already there
+    if (!currentGameData) {
+        const firstGame = window.availableGames[0];
+        if (firstGame) {
+            await openGame(firstGame);
+        } else {
+            return;
+        }
+    }
+    
+    // Switch to offsets category and find the offset
+    switchCategory('offsets', () => {
+        setTimeout(() => {
+            // Find and click the Offsets item
+            const offsetsItem = allItems.find(item => item.name === 'Offsets');
+            if (offsetsItem) {
+                offsetsItem.element.click();
+                
+                // Wait for offsets to render, then highlight the specific offset
+                setTimeout(() => {
+                    highlightOffset(offsetName);
+                }, 200);
+            }
+        }, 100);
+    });
+}
+
+// Highlight a specific offset in the details panel
+function highlightOffset(offsetName) {
+    const detailsPanel = document.getElementById('detailsPanel');
+    if (!detailsPanel) return;
+    
+    const offsetItems = detailsPanel.querySelectorAll('[data-offsetname]');
+    let found = false;
+    
+    offsetItems.forEach(item => {
+        const name = item.getAttribute('data-offsetname') || '';
+        if (name.toLowerCase() === offsetName.toLowerCase()) {
+            found = true;
+            item.style.outline = '3px solid rgba(144, 238, 144, 0.6)';
+            item.style.background = 'rgba(144, 238, 144, 0.15)';
+            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                item.style.outline = '';
+                item.style.background = '';
+            }, 3000);
+        }
+    });
+    
+    if (!found) {
+        showNotification(`⚠️ Offset "${offsetName}" not found`);
+    }
+}
+
 // Initialize
 async function init() {
     createStars();
@@ -37,6 +153,12 @@ async function init() {
     document.getElementById('propertyModalBackdrop').addEventListener('click', (e) => {
         if (e.target === document.getElementById('propertyModalBackdrop')) closePropertyModal();
     });
+    
+    // Check for offset in URL and navigate to it
+    const offsetName = getOffsetFromURL();
+    if (offsetName) {
+        navigateToOffset(offsetName);
+    }
 }
 
 // Create star background
@@ -81,8 +203,11 @@ function createComets() {
         comet.style.setProperty('--end-x', endX + 'px');
         comet.style.setProperty('--end-y', endY + 'px');
 
-        // Random animation duration between 8-12 seconds
-        const duration = 8 + Math.random() * 4;
+        // Random animation duration - minimum is 8 seconds (current speed), can be faster
+        // Using a multiplier to make speeds vary more (0.5x to 1.5x of base speed)
+        const baseDuration = 8; // Current minimum speed
+        const speedMultiplier = 0.5 + Math.random() * 1.0; // Random between 0.5 and 1.5
+        const duration = baseDuration / speedMultiplier; // Faster comets have shorter duration
         comet.style.animationDuration = duration + 's';
 
         // Random delay so they don't all start at once
@@ -178,12 +303,47 @@ function getGameIcon(gameName) {
 
 // Game search on home - no longer needed since we removed the games grid
 
+// Show progress bar
+function showProgressBar() {
+    const progressContainer = document.getElementById('progressBarContainer');
+    const progressFill = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressBarText');
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.textContent = 'Initializing...';
+    }
+}
+
+// Update progress bar
+function updateProgressBar(percent, text) {
+    const progressFill = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressBarText');
+    if (progressFill) {
+        progressFill.style.width = percent + '%';
+    }
+    if (progressText && text) {
+        progressText.textContent = text;
+    }
+}
+
+// Hide progress bar
+function hideProgressBar() {
+    const progressContainer = document.getElementById('progressBarContainer');
+    if (progressContainer) {
+        progressContainer.style.display = 'none';
+    }
+}
+
 // Open single game and load JSON files
 async function openGame(game) {
     try {
+        showProgressBar();
         showNotification('⏳ Loading game data...');
         const gameName = game.name;
         const filesUrl = `${GITHUB_API}/${gameName}`;
+        
+        updateProgressBar(10, 'Fetching file list...');
         const filesResponse = await fetch(filesUrl, {
             headers: {
                 Accept: 'application/vnd.github.v3+json'
@@ -199,12 +359,19 @@ async function openGame(game) {
             files: {}
         };
 
+        updateProgressBar(20, `Loading ${jsonFiles.length} files...`);
+        const totalFiles = jsonFiles.length;
+        let loadedFiles = 0;
+
         for (const file of jsonFiles) {
             try {
                 const fileResponse = await fetch(file.download_url);
                 if (fileResponse.ok) {
                     const data = await fileResponse.json();
                     gameData.files[file.name] = data;
+                    loadedFiles++;
+                    const progress = 20 + Math.floor((loadedFiles / totalFiles) * 70);
+                    updateProgressBar(progress, `Loading ${file.name} (${loadedFiles}/${totalFiles})...`);
                 }
             } catch (err) {
                 console.error(`Failed to load ${file.name}:`, err);
@@ -221,11 +388,14 @@ async function openGame(game) {
         document.getElementById('viewerPage').classList.add('active');
         document.getElementById('viewerPage').style.display = 'block';
 
+        updateProgressBar(100, 'Finalizing...');
         // default to classes
         switchCategory('classes');
+        hideProgressBar();
         showNotification('✅ Game loaded successfully!');
     } catch (err) {
         console.error('Error loading game:', err);
+        hideProgressBar();
         showNotification('❌ Failed to load game data');
     }
 }
@@ -552,6 +722,9 @@ function renderOffsets(item, panel) {
             const hexValue = '0x' + numericValue.toString(16).toUpperCase();
             const escapedName = escapeHtml(name);
 
+            // Create shareable link for this offset
+            const shareLink = window.location.origin + window.location.pathname + '?offset=' + encodeURIComponent(name);
+            
             html += '<div class="property-item" data-offsetname="' + escapedName + '">' +
                 '<div class="property-header">' +
                 '<div style="display:flex; gap:12px; align-items:center;">' +
@@ -564,6 +737,9 @@ function renderOffsets(item, panel) {
                 '<button class="copy-btn" title="Copy hex offset" onclick="copyToClipboard(\'' + hexValue + '\', \'' + escapedName + '\')">' +
                 clipboardSVG() +
                 '</button>' +
+                '<button class="copy-btn copy-link-btn" title="Copy shareable link" data-share-link="' + escapeHtml(shareLink) + '" style="margin-left: 4px;">' +
+                '<svg class="clipboard-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width: 18px; height: 18px;"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" fill="currentColor"/></svg>' +
+                '</button>' +
                 '</div>' +
                 '</div>' +
                 '</div>';
@@ -575,6 +751,17 @@ function renderOffsets(item, panel) {
     }
 
     panel.innerHTML = html;
+    
+    // Add event listeners for copy link buttons
+    const copyLinkButtons = panel.querySelectorAll('.copy-link-btn');
+    copyLinkButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const shareLink = btn.getAttribute('data-share-link');
+            if (shareLink) {
+                copyToClipboard(shareLink, 'Link');
+            }
+        });
+    });
 }
 
 function renderClassOrStruct(item, category, panel) {
@@ -980,5 +1167,134 @@ function closePropertyModal() {
     document.getElementById('propertyModalBackdrop').classList.remove('active');
 }
 
+/* --------------- API Endpoint for C++ Apps --------------- */
+
+/**
+ * API endpoint for fetching offset values programmatically
+ * Usage: ?api=offset&name=GWORLD or ?api=offset&name=UWorld?PersistentLevel
+ * Returns JSON: { "success": true, "name": "GWORLD", "value": 384473520, "hex": "0x16F0B230", "decimal": 384473520 }
+ */
+async function handleAPIRequest() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiType = urlParams.get('api');
+    
+    if (apiType === 'offset') {
+        const offsetName = urlParams.get('name');
+        if (!offsetName) {
+            return JSON.stringify({ 
+                success: false, 
+                error: "Missing 'name' parameter" 
+            });
+        }
+        
+        try {
+            // Load games if not already loaded
+            if (!window.availableGames || window.availableGames.length === 0) {
+                await loadGames();
+            }
+            
+            // Load game data if not already loaded
+            if (!currentGameData) {
+                const firstGame = window.availableGames[0];
+                if (firstGame) {
+                    await openGame(firstGame);
+                } else {
+                    return JSON.stringify({ 
+                        success: false, 
+                        error: "No game data available" 
+                    });
+                }
+            }
+            
+            // Get offsets data
+            const offsetsFile = currentGameData.files['OffsetsInfo.json'];
+            if (!offsetsFile || !offsetsFile.data) {
+                return JSON.stringify({ 
+                    success: false, 
+                    error: "Offsets data not found" 
+                });
+            }
+            
+            // Find the offset
+            const offset = offsetsFile.data.find(item => {
+                const name = item[0];
+                return name.toLowerCase() === offsetName.toLowerCase();
+            });
+            
+            if (!offset) {
+                return JSON.stringify({ 
+                    success: false, 
+                    error: `Offset "${offsetName}" not found` 
+                });
+            }
+            
+            const name = offset[0];
+            const rawValue = offset[1];
+            const numericValue = parseOffsetValue(rawValue);
+            const hexValue = '0x' + numericValue.toString(16).toUpperCase();
+            
+            const result = {
+                success: true,
+                name: name,
+                value: numericValue,
+                hex: hexValue,
+                decimal: numericValue
+            };
+            
+            // Return JSON response
+            return JSON.stringify(result, null, 2);
+        } catch (err) {
+            return JSON.stringify({ 
+                success: false, 
+                error: err.message 
+            });
+        }
+    }
+    
+    return null;
+}
+
+// Handle API requests on page load
+async function checkAPIRequest() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('api')) {
+        const result = await handleAPIRequest();
+        if (result) {
+            const format = urlParams.get('format') || 'html';
+            
+            if (format === 'json' || urlParams.get('raw') === 'true') {
+                // Return pure JSON for programmatic access
+                document.body.innerHTML = `<pre style="margin: 0; padding: 20px; font-family: 'Courier New', monospace; background: #0f0f23; color: #e0e0e0; min-height: 100vh; white-space: pre-wrap; word-wrap: break-word;">${result}</pre>`;
+            } else {
+                // Create a formatted response page with JSON
+                document.body.innerHTML = `
+                    <div style="padding: 40px; font-family: 'Courier New', monospace; background: #0f0f23; color: #e0e0e0; min-height: 100vh;">
+                        <h2 style="color: #667eea; margin-bottom: 20px;">API Response</h2>
+                        <pre style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(102,126,234,0.3); overflow-x: auto;">${result}</pre>
+                        <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">
+                            This endpoint can be used by C++ applications to fetch offset values programmatically.<br>
+                            <strong>Usage:</strong><br>
+                            • Browser: <code style="color: #90EE90;">?api=offset&name=GWORLD</code><br>
+                            • C++ (JSON): <code style="color: #90EE90;">?api=offset&name=GWORLD&format=json</code><br>
+                            • C++ (Raw): <code style="color: #90EE90;">?api=offset&name=GWORLD&raw=true</code>
+                        </p>
+                    </div>
+                `;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 /* --------------- Init --------------- */
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check for API requests first
+    const isAPIRequest = await checkAPIRequest();
+    if (isAPIRequest) {
+        return; // Don't initialize normal app if it's an API request
+    }
+    
+    // Normal initialization
+    await init();
+});
