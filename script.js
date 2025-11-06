@@ -16,6 +16,7 @@ let allItems = []; // currently loaded items in items-list (reflects currentCate
 // Initialize
 async function init() {
     createStars();
+    createComets();
     await loadGames();
 
     // Ensure filters visible by default
@@ -51,6 +52,46 @@ function createStars() {
     }
 }
 
+// Create comet animations
+function createComets() {
+    const starsContainer = document.getElementById('stars');
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Create 4 comets, all going from top to bottom-left at the same angle
+    for (let i = 0; i < 4; i++) {
+        const comet = document.createElement('div');
+        comet.className = 'comet comet-animation';
+
+        // Random starting position anywhere along the top edge
+        // Start from anywhere along the top, including off-screen to the right
+        const startX = -100 + Math.random() * (viewportWidth + 300); // Can start anywhere along top, including off-screen
+        const startY = -100 - Math.random() * 100; // Start off-screen top
+
+        // Calculate end position: same angle (top-right to bottom-left = -45 degrees)
+        // All comets move diagonally: x decreases, y increases at the same rate
+        // The diagonal distance should be enough to cross the entire viewport
+        const distance = Math.sqrt(viewportWidth * viewportWidth + viewportHeight * viewportHeight) + 400;
+        const endX = startX - distance; // Move left (same amount as down)
+        const endY = startY + distance; // Move down (same amount as left)
+
+        // Set CSS custom properties for animation
+        comet.style.setProperty('--start-x', startX + 'px');
+        comet.style.setProperty('--start-y', startY + 'px');
+        comet.style.setProperty('--end-x', endX + 'px');
+        comet.style.setProperty('--end-y', endY + 'px');
+
+        // Random animation duration between 8-12 seconds
+        const duration = 8 + Math.random() * 4;
+        comet.style.animationDuration = duration + 's';
+
+        // Random delay so they don't all start at once
+        comet.style.animationDelay = Math.random() * 5 + 's';
+
+        starsContainer.appendChild(comet);
+    }
+}
+
 // Load games list and SDK update date
 async function loadGames() {
     try {
@@ -67,9 +108,9 @@ async function loadGames() {
         // Store games for later use
         window.availableGames = games;
 
-        // Fetch last update date from GitHub commits API
+        // Fetch last update date from GitHub commits API (specifically for Fortnite folder)
         try {
-            const commitsResponse = await fetch('https://api.github.com/repos/Kapekoodaa/fn-sdk/commits?path=games&per_page=1', {
+            const commitsResponse = await fetch('https://api.github.com/repos/Kapekoodaa/fn-sdk/commits?path=games/Fortnite&per_page=1', {
                 headers: {
                     Accept: 'application/vnd.github.v3+json'
                 }
@@ -97,18 +138,8 @@ async function loadGames() {
     }
 }
 
-// Format date to readable string
+// Format date to readable string (actual date, not relative)
 function formatDate(date) {
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    if (days < 365) return `${Math.floor(days / 30)} months ago`;
-
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -615,20 +646,20 @@ function renderClassOrStruct(item, category, panel) {
     }
 
     panel.innerHTML = html;
-    
+
     // Add search functionality for properties
     if (properties.length > 0) {
         const searchInput = panel.querySelector('#propertySearchInDetails');
         const searchInfo = panel.querySelector('#propertySearchResultsInfo');
         const propertiesList = panel.querySelector('#propertiesList');
         const allPropertyItems = propertiesList.querySelectorAll('.property-item');
-        
+
         let searchTimeout = null;
-        
+
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim().toLowerCase();
             clearTimeout(searchTimeout);
-            
+
             searchTimeout = setTimeout(() => {
                 if (searchTerm === '') {
                     allPropertyItems.forEach(item => {
@@ -638,17 +669,17 @@ function renderClassOrStruct(item, category, panel) {
                     searchInfo.textContent = '';
                     return;
                 }
-                
+
                 let matchCount = 0;
                 allPropertyItems.forEach(item => {
                     const propName = item.getAttribute('data-propname') || '';
                     const propType = item.getAttribute('data-proptype') || '';
                     const propOffset = item.getAttribute('data-propoffset') || '';
-                    
+
                     const matchesName = propName.toLowerCase().includes(searchTerm);
                     const matchesType = propType.toLowerCase().includes(searchTerm);
                     const matchesOffset = propOffset.toLowerCase().includes(searchTerm);
-                    
+
                     if (matchesName || matchesType || matchesOffset) {
                         item.style.display = 'block';
                         item.classList.add('search-highlight');
@@ -658,7 +689,7 @@ function renderClassOrStruct(item, category, panel) {
                         item.classList.remove('search-highlight');
                     }
                 });
-                
+
                 searchInfo.textContent = matchCount > 0 ? `Found ${matchCount} of ${properties.length} properties` : 'No properties found';
             }, 150);
         });
