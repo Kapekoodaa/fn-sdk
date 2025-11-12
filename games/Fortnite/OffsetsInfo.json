@@ -1,17 +1,18 @@
 {
-    "updated_at": "1762367472890",
+    "updated_at": "1762897957630",
     "version": 10202,
     "data": [
-        ["GWORLD", 384473520],
-        ["GWORLD2", 384128112],
-        ["GNAMES", 381797824],
-        ["GOBJECTS", 382709632],
+        ["GWORLD", 389799192],
+        ["GWORLD COPY", 389473280],
+        ["GNAMES", 387146240],
+        ["GOBJECTS", 388054296],
         ["PROCESSEVENT", 225946],
         ["INDEX_PROCESSEVENT", 8],
-        ["Camera Location", 368],
-        ["Camera Rotation", 392],
-        ["Seconds", 400],
-        ["Projectile Speed", 9796],
-        ["Projectile Gravity", 9800]
+        ["Camera Location", 384],
+        ["Camera Rotation", 400],
+        ["Seconds", 416],
+        ["Fov", 948],
+        ["Projectile Speed", 9352],
+        ["Projectile Gravity", 8664]
     ]
 }
